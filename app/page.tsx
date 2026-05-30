@@ -309,9 +309,7 @@ export default function Home() {
                 <Send className="w-3.5 h-3.5 text-black" />
               </button>
             </div>
-            <p className="text-center text-xs text-white/20 mt-2">
-              Switching models starts a new conversation
-            </p>
+
           </div>
         </div>
 
