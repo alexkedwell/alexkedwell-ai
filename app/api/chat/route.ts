@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openrouter = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY!,
-  defaultHeaders: {
-    'HTTP-Referer': 'https://alexkedwell.com',
-    'X-Title': 'AlexKedwell AI Hub',
-  },
-})
+function getClient() {
+  return new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey: process.env.OPENROUTER_API_KEY || 'placeholder',
+    defaultHeaders: {
+      'HTTP-Referer': 'https://alexkedwell.com',
+      'X-Title': 'AlexKedwell AI Hub',
+    },
+  })
+}
 
 export async function POST(req: NextRequest) {
   const { messages, modelId } = await req.json()
@@ -16,6 +18,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing messages or modelId' }, { status: 400 })
   }
 
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey || apiKey === 'placeholder' || apiKey.startsWith('sk-or-placeholder')) {
+    return NextResponse.json({ error: 'OpenRouter API key not configured. Please set OPENROUTER_API_KEY in your environment.' }, { status: 503 })
+  }
+
+  const openrouter = getClient()
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
