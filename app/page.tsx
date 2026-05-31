@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MODELS, AIModel, DEFAULT_MODEL } from '@/lib/models'
-import { Send, PenSquare, ChevronDown, Check, AlertTriangle } from 'lucide-react'
+import { Send, PenSquare, ChevronDown, Check, AlertTriangle, Zap, Brain, DollarSign } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { NavBar } from '@/components/NavBar'
 import type { Session } from '@supabase/supabase-js'
@@ -239,29 +239,85 @@ export default function Home() {
       </button>
 
       {dropdownOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-[#111111] border border-white/10 rounded-xl shadow-2xl z-50 py-1.5 overflow-hidden">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-[#0d0d0d] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+          {/* Header */}
+          <div className="px-3 pt-3 pb-2 border-b border-white/5">
+            <p className="text-xs text-white/30 font-medium uppercase tracking-wider">Choose Model</p>
+          </div>
+          <div className="overflow-y-auto max-h-[70vh] py-1.5">
           {MODELS.map(model => (
             <button
               key={model.id}
               onClick={() => handleModelSelect(model)}
-              className="w-full text-left px-3 py-2 flex items-center gap-3 hover:bg-white/5 transition-colors group"
+              className={`w-full text-left px-3 py-2.5 transition-colors group ${
+                model.id === selectedModel.id ? 'bg-white/5' : 'hover:bg-white/4'
+              }`}
             >
-              <ProviderDot model={model} />
-              <span className="flex-1 text-sm text-white/80 font-medium">{model.name}</span>
-              <span className="text-xs text-white/30">{model.provider}</span>
-              {model.badge && (
-                <span
-                  className="text-xs px-1.5 py-0.5 rounded font-medium"
-                  style={{ backgroundColor: model.badgeColor + '22', color: model.badgeColor }}
-                >
-                  {model.badge}
-                </span>
-              )}
-              {model.id === selectedModel.id && (
-                <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: model.providerColor }} />
-              )}
+              {/* Row 1: dot + name + badge + checkmark */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <ProviderDot model={model} />
+                <span className="flex-1 text-sm text-white/90 font-semibold">{model.name}</span>
+                {model.badge && (
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0"
+                    style={{ backgroundColor: model.badgeColor + '22', color: model.badgeColor }}
+                  >
+                    {model.badge}
+                  </span>
+                )}
+                {model.id === selectedModel.id && (
+                  <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: model.providerColor }} />
+                )}
+              </div>
+              {/* Row 2: tagline */}
+              <p className="text-xs text-white/35 ml-4 mb-2 leading-snug">{model.tagline}</p>
+              {/* Row 3: stats */}
+              <div className="flex items-center gap-3 ml-4">
+                {/* Intelligence */}
+                <div className="flex items-center gap-1">
+                  <Brain className="w-3 h-3 text-white/20" />
+                  <div className="flex gap-0.5">
+                    {[...Array(10)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          backgroundColor: i < Math.round(model.intelligenceRating)
+                            ? model.providerColor
+                            : 'rgba(255,255,255,0.08)'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {/* Speed */}
+                <div className="flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-white/20" />
+                  <div className="flex gap-0.5">
+                    {[...Array(10)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          backgroundColor: i < Math.round(model.speedRating)
+                            ? '#22c55e'
+                            : 'rgba(255,255,255,0.08)'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {/* Price */}
+                <div className="flex items-center gap-1 ml-auto">
+                  <DollarSign className="w-3 h-3 text-white/20" />
+                  <span className="text-[10px] text-white/30 font-mono">
+                    ${model.costPer1MInput.toFixed(2)}/${model.costPer1MOutput.toFixed(2)} /1M
+                  </span>
+                </div>
+              </div>
             </button>
           ))}
+          </div>
         </div>
       )}
     </div>

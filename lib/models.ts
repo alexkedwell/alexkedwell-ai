@@ -1,25 +1,26 @@
 export interface AIModel {
-  id: string              // OpenRouter model ID
-  name: string            // Display name
-  provider: string        // Company
-  providerColor: string   // Brand color hex
-  tagline: string         // One-liner
-  description: string     // What it's good for (2-3 sentences)
-  strengths: string[]     // Bullet points
-  costPer1MInput: number  // USD
-  costPer1MOutput: number // USD
-  contextWindow: string   // e.g. "200K tokens"
+  id: string
+  name: string
+  provider: string
+  providerColor: string
+  tagline: string
+  description: string
+  strengths: string[]
+  costPer1MInput: number
+  costPer1MOutput: number
+  contextWindow: string
   intelligenceRating: number  // 1-10
   speedRating: number         // 1-10 (10=fastest)
-  badge?: string          // e.g. "Best Value", "Most Powerful", "Fastest"
+  badge?: string
   badgeColor?: string
   isDefault?: boolean
 }
 
 export const MODELS: AIModel[] = [
+  // ── Anthropic ──────────────────────────────────────────────
   {
     id: 'anthropic/claude-sonnet-4-5',
-    name: 'Claude Sonnet',
+    name: 'Claude Sonnet 4.5',
     provider: 'Anthropic',
     providerColor: '#D97706',
     tagline: 'The sharpest thinker in the room',
@@ -34,8 +35,24 @@ export const MODELS: AIModel[] = [
     badgeColor: '#D97706',
   },
   {
+    id: 'anthropic/claude-opus-4-5',
+    name: 'Claude Opus 4.5',
+    provider: 'Anthropic',
+    providerColor: '#D97706',
+    tagline: 'Maximum intelligence, no compromises',
+    description: 'Anthropic\'s most powerful model. Tackles the hardest tasks with unmatched depth. Best for research, complex analysis, and multi-step reasoning where quality is everything.',
+    strengths: ['Deep research', 'Multi-step reasoning', 'Complex code architecture', 'Expert-level analysis'],
+    costPer1MInput: 15.00,
+    costPer1MOutput: 75.00,
+    contextWindow: '200K tokens',
+    intelligenceRating: 10,
+    speedRating: 4,
+    badge: 'Most Powerful',
+    badgeColor: '#B45309',
+  },
+  {
     id: 'anthropic/claude-haiku-4-5',
-    name: 'Claude Haiku',
+    name: 'Claude Haiku 4.5',
     provider: 'Anthropic',
     providerColor: '#D97706',
     tagline: 'Fast, cheap, surprisingly capable',
@@ -47,6 +64,7 @@ export const MODELS: AIModel[] = [
     intelligenceRating: 7.5,
     speedRating: 9.5,
   },
+  // ── OpenAI ─────────────────────────────────────────────────
   {
     id: 'openai/gpt-4o',
     name: 'GPT-4o',
@@ -78,21 +96,55 @@ export const MODELS: AIModel[] = [
     badgeColor: '#10A37F',
   },
   {
-    id: 'x-ai/grok-2-1212',
-    name: 'Grok 2',
+    id: 'openai/o3-mini',
+    name: 'o3 Mini',
+    provider: 'OpenAI',
+    providerColor: '#10A37F',
+    tagline: 'OpenAI\'s reasoning model, made affordable',
+    description: 'OpenAI\'s compact reasoning model. Thinks before it answers — great for math, logic, and coding challenges where accuracy matters more than speed.',
+    strengths: ['Math & logic', 'Code debugging', 'Scientific reasoning', 'Step-by-step problems'],
+    costPer1MInput: 1.10,
+    costPer1MOutput: 4.40,
+    contextWindow: '200K tokens',
+    intelligenceRating: 9.2,
+    speedRating: 6,
+    badge: 'Best Reasoning (OpenAI)',
+    badgeColor: '#059669',
+  },
+  // ── xAI ────────────────────────────────────────────────────
+  {
+    id: 'x-ai/grok-3',
+    name: 'Grok 3',
     provider: 'xAI',
     providerColor: '#1DA1F2',
-    tagline: 'Real-time web access + no-filter answers',
-    description: 'Elon Musk\'s xAI model. Has real-time web search built in and is known for direct, uncensored answers. Great for current events, trending topics, and honest feedback.',
-    strengths: ['Real-time web search', 'Current events', 'Honest/direct answers', 'Twitter/X content'],
-    costPer1MInput: 2.00,
-    costPer1MOutput: 10.00,
+    tagline: 'xAI\'s most capable — real-time + raw',
+    description: 'Elon\'s latest flagship. Real-time web access, huge context, and known for direct uncensored answers. Strong on current events, coding, and big-picture analysis.',
+    strengths: ['Real-time web search', 'Current events', 'Direct answers', 'Long-form reasoning'],
+    costPer1MInput: 3.00,
+    costPer1MOutput: 15.00,
     contextWindow: '131K tokens',
-    intelligenceRating: 8.5,
-    speedRating: 7,
+    intelligenceRating: 9.3,
+    speedRating: 6.5,
   },
   {
-    id: 'deepseek/deepseek-chat',
+    id: 'x-ai/grok-3-mini',
+    name: 'Grok 3 Mini',
+    provider: 'xAI',
+    providerColor: '#1DA1F2',
+    tagline: 'Fast Grok at a fraction of the cost',
+    description: 'Lightweight version of Grok 3. Retains the real-time web access and direct style but faster and cheaper. Great for quick lookups and social media content.',
+    strengths: ['Fast responses', 'Real-time web', 'Social content', 'Budget-friendly'],
+    costPer1MInput: 0.30,
+    costPer1MOutput: 0.50,
+    contextWindow: '131K tokens',
+    intelligenceRating: 7.8,
+    speedRating: 9,
+    badge: 'Best Value (xAI)',
+    badgeColor: '#1DA1F2',
+  },
+  // ── DeepSeek ───────────────────────────────────────────────
+  {
+    id: 'deepseek/deepseek-chat-v3-0324',
     name: 'DeepSeek V3',
     provider: 'DeepSeek',
     providerColor: '#4F46E5',
@@ -113,56 +165,75 @@ export const MODELS: AIModel[] = [
     name: 'DeepSeek R1',
     provider: 'DeepSeek',
     providerColor: '#4F46E5',
-    tagline: 'Think before you answer — like o1 but free',
-    description: 'DeepSeek\'s reasoning model. Like OpenAI\'s o1 — it thinks step by step before answering. Crushes math, science, and logic problems. Shockingly cheap for what it does.',
-    strengths: ['Advanced math', 'Scientific reasoning', 'Step-by-step problem solving', 'Logic puzzles'],
+    tagline: 'Think before you answer — like o1 but cheap',
+    description: 'DeepSeek\'s reasoning model. Like OpenAI\'s o1 — it thinks step by step before answering. Crushes math, science, and logic problems at a shocking price.',
+    strengths: ['Advanced math', 'Scientific reasoning', 'Step-by-step logic', 'Cheap reasoning'],
     costPer1MInput: 0.55,
     costPer1MOutput: 2.19,
     contextWindow: '64K tokens',
     intelligenceRating: 9.2,
     speedRating: 5,
-    badge: 'Best Reasoning',
+    badge: 'Best Reasoning (Budget)',
     badgeColor: '#7C3AED',
   },
+  // ── Google ─────────────────────────────────────────────────
   {
-    id: 'google/gemini-pro-1.5',
-    name: 'Gemini 1.5 Pro',
+    id: 'google/gemini-2.5-pro-preview',
+    name: 'Gemini 2.5 Pro',
     provider: 'Google',
     providerColor: '#4285F4',
-    tagline: 'Longest memory of any AI model',
-    description: 'Google\'s powerhouse with a 2 million token context window — that\'s entire codebases, books, or massive datasets in one shot. Strong at multimodal tasks with Google\'s backing.',
-    strengths: ['Massive context (2M tokens)', 'Document analysis', 'Multimodal', 'Long conversations'],
+    tagline: 'Google\'s smartest — with monster context',
+    description: 'Google\'s latest flagship with a massive context window. Excellent at multimodal tasks, document analysis, and long conversations. Rivals the best from OpenAI and Anthropic.',
+    strengths: ['Massive context', 'Multimodal (text/images)', 'Document analysis', 'Long conversations'],
     costPer1MInput: 1.25,
-    costPer1MOutput: 5.00,
-    contextWindow: '2M tokens',
-    intelligenceRating: 8.7,
-    speedRating: 6.5,
+    costPer1MOutput: 10.00,
+    contextWindow: '1M tokens',
+    intelligenceRating: 9.4,
+    speedRating: 6,
     badge: 'Longest Context',
     badgeColor: '#4285F4',
   },
   {
-    id: 'google/gemini-flash-1.5',
-    name: 'Gemini Flash',
+    id: 'google/gemini-2.0-flash-001',
+    name: 'Gemini 2.0 Flash',
     provider: 'Google',
     providerColor: '#4285F4',
     tagline: 'Google speed at Google scale pricing',
     description: 'Google\'s fastest model. Multimodal capable (text, images, audio, video). Incredibly fast response times with solid quality. Best for high-volume, time-sensitive tasks.',
     strengths: ['Ultra-fast responses', 'Multimodal input', 'High volume tasks', 'Low latency'],
-    costPer1MInput: 0.075,
-    costPer1MOutput: 0.30,
+    costPer1MInput: 0.10,
+    costPer1MOutput: 0.40,
     contextWindow: '1M tokens',
-    intelligenceRating: 7.2,
+    intelligenceRating: 7.5,
     speedRating: 10,
     badge: 'Fastest',
     badgeColor: '#0EA5E9',
   },
+  // ── Meta ───────────────────────────────────────────────────
+  {
+    id: 'meta-llama/llama-3.3-70b-instruct',
+    name: 'Llama 3.3 70B',
+    provider: 'Meta',
+    providerColor: '#0866FF',
+    tagline: 'Open source powerhouse',
+    description: 'Meta\'s best open-source model. Powerful, transparent, and no data goes to a closed company. Great for privacy-conscious users and developers who want full control.',
+    strengths: ['Open source', 'Privacy-focused', 'Coding & analysis', 'No data retention'],
+    costPer1MInput: 0.59,
+    costPer1MOutput: 0.79,
+    contextWindow: '128K tokens',
+    intelligenceRating: 8.2,
+    speedRating: 8,
+    badge: 'Best Open Source',
+    badgeColor: '#0866FF',
+  },
+  // ── Mistral ────────────────────────────────────────────────
   {
     id: 'mistralai/mistral-large',
     name: 'Mistral Large',
     provider: 'Mistral AI',
     providerColor: '#FF7000',
     tagline: 'European AI — privacy-first, multilingual',
-    description: 'France\'s best AI. GDPR-compliant, data stays in Europe, strong multilingual support (especially French, Spanish, German, Italian). Great for business users with privacy requirements.',
+    description: 'France\'s best AI. GDPR-compliant, data stays in Europe, strong multilingual support. Great for business users with privacy requirements.',
     strengths: ['Privacy-focused', 'Multilingual', 'European compliance', 'Business writing'],
     costPer1MInput: 2.00,
     costPer1MOutput: 6.00,
