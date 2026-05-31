@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Avatar } from './Avatar'
-import { ChevronDown, LogOut, User, CreditCard, MessageSquare, Users, Plus } from 'lucide-react'
+import { ChevronDown, LogOut, User, CreditCard, MessageSquare, Users, Plus, BookOpen, Cpu } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
 
 interface Profile {
@@ -88,6 +88,24 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Credits</span>
+          </Link>
+          <Link
+            href="/models"
+            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
+              pathname === '/models' ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Models</span>
+          </Link>
+          <Link
+            href="/instructions"
+            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
+              pathname === '/instructions' ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Guide</span>
           </Link>
         </div>
 
