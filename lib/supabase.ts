@@ -1,15 +1,16 @@
+import { createBrowserClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 
-// NEXT_PUBLIC_ vars are baked at build time; fallbacks ensure the client works
-// even if the build cache doesn't include env vars
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xuyodxtwxpfyzkjqowlb.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_cCTjsIWxK38MpaoMwZIQTw_iTwk4anQ'
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Use createBrowserClient so auth tokens are stored in cookies,
+// allowing the server-side middleware to read the session
+export const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xuyodxtwxpfyzkjqowlb.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_cCTjsIWxK38MpaoMwZIQTw_iTwk4anQ'
+)
 
 export function createServiceClient() {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xuyodxtwxpfyzkjqowlb.supabase.co',
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
