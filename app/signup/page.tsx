@@ -8,6 +8,7 @@ export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -15,13 +16,32 @@ export default function SignupPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      setError(error.message)
+
+    const { data, error: signupError } = await supabase.auth.signUp({ email, password })
+    if (signupError) {
+      setError(signupError.message)
       setLoading(false)
-    } else {
-      router.push('/')
+      return
     }
+
+    if (data.session) {
+      // Create profile and credits
+      await Promise.allSettled([
+        fetch('/api/profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${data.session.access_token}`,
+          },
+          body: JSON.stringify({ display_name: displayName.trim() || null }),
+        }),
+        fetch('/api/credits', {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        }),
+      ])
+    }
+
+    router.push('/profile')
   }
 
   return (
@@ -33,6 +53,16 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
+          <div>
+            <label className="block text-xs text-white/50 mb-1.5 font-medium">Display name</label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              className="w-full bg-[#2f2f2f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 placeholder-white/30 focus:outline-none focus:border-white/30 transition-colors"
+              placeholder="Your name (optional)"
+            />
+          </div>
           <div>
             <label className="block text-xs text-white/50 mb-1.5 font-medium">Email</label>
             <input

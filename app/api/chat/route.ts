@@ -1,45 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { createServiceClient } from '@/lib/supabase'
-import { decryptApiKey } from '@/lib/crypto'
-import { createClient } from '@supabase/supabase-js'
-
-async function getUserApiKey(req: NextRequest): Promise<string | null> {
-  // Check for owner fallback key first
-  const fallbackKey = process.env.OPENROUTER_API_KEY
-  
-  // Try to get user from Authorization header
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    // No auth token — use fallback if available
-    return fallbackKey || null
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  const supabaseClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-  const { data: { user }, error } = await supabaseClient.auth.getUser(token)
-  if (error || !user) return fallbackKey || null
-
-  // Look up user's encrypted key
-  const db = createServiceClient()
-  const { data, error: dbError } = await db
-    .from('user_api_keys')
-    .select('encrypted_key')
-    .eq('user_id', user.id)
-    .eq('provider', 'openrouter')
-    .single()
-
-  if (dbError || !data) return fallbackKey || null
-
-  try {
-    return decryptApiKey(data.encrypted_key, user.id)
-  } catch {
-    return fallbackKey || null
-  }
-}
+import { getUserFromRequest } from '@/lib/auth-helpers'
+import { getUserCredits, deductCredits, calculateCost } from '@/lib/credits'
+import { MODELS } from '@/lib/models'
 
 export async function POST(req: NextRequest) {
   const { messages, modelId } = await req.json()
@@ -47,13 +10,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing messages or modelId' }, { status: 400 })
   }
 
-  const apiKey = await getUserApiKey(req)
-  if (!apiKey) {
+  // Auth check
+  const user = await getUserFromRequest(req)
+  if (!user) {
+    return NextResponse.json({ error: 'Please sign in to chat' }, { status: 401 })
+  }
+
+  // Credit check
+  const credits = await getUserCredits(user.id)
+  if (credits.balance_usd <= 0) {
     return NextResponse.json(
-      { error: 'Please add your OpenRouter API key in settings' },
-      { status: 401 }
+      { error: 'Insufficient credits. Add credits to continue chatting.' },
+      { status: 402 }
     )
   }
+
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
+  }
+
+  const model = MODELS.find(m => m.id === modelId)
+  const costPer1MInput = model?.costPer1MInput ?? 1.0
+  const costPer1MOutput = model?.costPer1MOutput ?? 3.0
 
   const openrouter = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
@@ -65,6 +44,8 @@ export async function POST(req: NextRequest) {
   })
 
   const encoder = new TextEncoder()
+  let inputTokens = 0
+  let outputTokens = 0
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -74,13 +55,32 @@ export async function POST(req: NextRequest) {
           messages,
           stream: true,
           max_tokens: 4096,
+          stream_options: { include_usage: true },
         })
+
         for await (const chunk of completion) {
           const text = chunk.choices[0]?.delta?.content ?? ''
           if (text) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
           }
+          // Capture usage from the final chunk
+          if (chunk.usage) {
+            inputTokens = chunk.usage.prompt_tokens ?? 0
+            outputTokens = chunk.usage.completion_tokens ?? 0
+          }
         }
+
+        // Deduct credits after streaming completes
+        let newBalance = credits.balance_usd
+        if (inputTokens > 0 || outputTokens > 0) {
+          const cost = calculateCost(inputTokens, outputTokens, costPer1MInput, costPer1MOutput)
+          const result = await deductCredits(user.id, cost)
+          newBalance = result.newBalance
+        }
+
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ balance: newBalance })}\n\n`)
+        )
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
@@ -88,14 +88,15 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
         controller.close()
       }
-    }
+    },
   })
 
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
+      'X-Credit-Balance': String(credits.balance_usd),
     },
   })
 }
