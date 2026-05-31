@@ -22,7 +22,7 @@ export default function SignupPage() {
     const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: 'https://alexkedwell.com/auth/callback' }
+      options: { emailRedirectTo: 'https://ched.io/auth/callback' }
     })
     if (signupError) {
       setError(signupError.message)
@@ -47,7 +47,7 @@ export default function SignupPage() {
       ])
     }
 
-    router.push('/profile')
+    router.push('/onboarding')
   }
 
   return (

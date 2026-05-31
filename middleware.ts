@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/login', '/signup', '/auth/']
+const PUBLIC_PATHS = ['/login', '/signup', '/auth/', '/onboarding']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -44,6 +44,26 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const loginUrl = new URL('/login', request.url)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // Force onboarding if no OpenRouter key set (skip for onboarding itself)
+  if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api/')) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('openrouter_api_key')
+      .eq('id', user.id)
+      .single()
+
+    const hasKey = profile?.openrouter_api_key?.trim()
+    const hasCredits = !hasKey // check credits only if no key
+
+    // If no key AND not on credits/profile page, check if they have credits
+    if (!hasKey && !pathname.startsWith('/credits') && !pathname.startsWith('/profile')) {
+      // Redirect new users (no profile row yet) to onboarding
+      if (!profile) {
+        return NextResponse.redirect(new URL('/onboarding', request.url))
+      }
+    }
   }
 
   return response
