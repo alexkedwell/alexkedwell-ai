@@ -60,7 +60,7 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
 
       {/* Right: balance + avatar */}
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-        {/* Nav links */}
+        {/* Nav links — mobile shows only Chat/Rooms/Credits icons, desktop shows all with labels */}
         <div className="flex items-center gap-0.5 sm:gap-1 mr-1 sm:mr-2">
           <Link
             href="/"
@@ -89,23 +89,24 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Credits</span>
           </Link>
+          {/* Models + Guide — hidden on mobile, in avatar dropdown instead */}
           <Link
             href="/models"
-            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium h-8 transition-colors ${
               pathname === '/models' ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Models</span>
+            Models
           </Link>
           <Link
             href="/instructions"
-            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium h-8 transition-colors ${
               pathname === '/instructions' ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Guide</span>
+            Guide
           </Link>
         </div>
 
@@ -160,6 +161,25 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
                   <CreditCard className="w-3.5 h-3.5" />
                   Credits
                 </Link>
+                {/* Mobile-only links */}
+                <div className="sm:hidden">
+                  <Link
+                    href="/models"
+                    onClick={() => setDropdownOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+                  >
+                    <Cpu className="w-3.5 h-3.5" />
+                    Models
+                  </Link>
+                  <Link
+                    href="/instructions"
+                    onClick={() => setDropdownOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Guide
+                  </Link>
+                </div>
                 <div className="border-t border-white/5 mt-1 pt-1">
                   <button
                     onClick={handleLogout}
