@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { display_name, avatar_url, avatar_color } = body
+  const { display_name, avatar_url, avatar_color, openrouter_api_key } = body
 
   const db = createServiceClient()
   const { data, error } = await db
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
       display_name: display_name ?? null,
       avatar_url: avatar_url ?? null,
       avatar_color: avatar_color ?? '#6366f1',
+      openrouter_api_key: openrouter_api_key ?? null,
     })
     .select()
     .single()

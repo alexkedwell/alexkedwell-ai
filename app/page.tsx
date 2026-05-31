@@ -86,10 +86,17 @@ export default function Home() {
       fetch('/api/profile', { headers: { Authorization: `Bearer ${token}` } }),
       fetch('/api/credits', { headers: { Authorization: `Bearer ${token}` } }),
     ])
-    if (profileRes.ok) setProfile(await profileRes.json())
+    if (profileRes.ok) {
+      const p = await profileRes.json()
+      setProfile(p)
+      // BYOK users get effectively unlimited balance
+      if (p.openrouter_api_key) setBalance(9999)
+    }
     if (creditsRes.ok) {
       const c = await creditsRes.json()
-      setBalance(c.balance ?? 0)
+      if (!(profile as { openrouter_api_key?: string } | null)?.openrouter_api_key) {
+        setBalance(c.balance ?? 0)
+      }
     }
   }
 

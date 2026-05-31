@@ -25,6 +25,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [balance, setBalance] = useState<number>(0)
   const [displayName, setDisplayName] = useState('')
+  const [openrouterKey, setOpenrouterKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
   const [avatarColor, setAvatarColor] = useState('#6366f1')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -62,6 +64,7 @@ export default function ProfilePage() {
       setDisplayName(p.display_name ?? '')
       setAvatarColor(p.avatar_color ?? '#6366f1')
       setAvatarUrl(p.avatar_url ?? null)
+      setOpenrouterKey(p.openrouter_api_key ?? '')
     }
     if (creditsRes.ok) {
       const c = await creditsRes.json()
@@ -112,6 +115,7 @@ export default function ProfilePage() {
           display_name: displayName.trim() || null,
           avatar_url: avatarUrl,
           avatar_color: avatarColor,
+          openrouter_api_key: openrouterKey.trim() || null,
         }),
       })
 
@@ -197,6 +201,34 @@ export default function ProfilePage() {
                 placeholder="Your name"
                 className="w-full bg-[#2f2f2f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 placeholder-white/30 focus:outline-none focus:border-white/30 transition-colors"
               />
+            </div>
+
+            {/* OpenRouter API Key (BYOK) */}
+            <div>
+              <label className="block text-xs text-white/50 mb-1.5 font-medium">
+                OpenRouter API Key
+                <span className="ml-2 text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded-full font-semibold">BYOK</span>
+              </label>
+              <p className="text-xs text-white/30 mb-2">Add your own <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">OpenRouter API key</a> to use your own credits instead of purchasing through Ched. Your messages won&apos;t be charged to your Ched balance.</p>
+              <div className="relative">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={openrouterKey}
+                  onChange={e => setOpenrouterKey(e.target.value)}
+                  placeholder="sk-or-v1-..."
+                  className="w-full bg-[#2f2f2f] border border-white/10 rounded-xl px-4 py-3 pr-16 text-sm text-white/90 placeholder-white/30 focus:outline-none focus:border-indigo-500/50 transition-colors font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(s => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30 hover:text-white/60 transition-colors"
+                >
+                  {showKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {openrouterKey && (
+                <p className="text-xs text-green-400/70 mt-1.5">✓ BYOK active — your OpenRouter key will be used for all chats</p>
+              )}
             </div>
 
             {/* Email (read-only) */}

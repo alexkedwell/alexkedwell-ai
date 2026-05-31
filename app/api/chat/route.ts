@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { getUserFromRequest } from '@/lib/auth-helpers'
 import { getUserCredits, deductCredits, calculateCost } from '@/lib/credits'
+import { createServiceClient } from '@/lib/supabase'
 import { MODELS } from '@/lib/models'
 
 export async function POST(req: NextRequest) {
@@ -16,16 +17,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Please sign in to chat' }, { status: 401 })
   }
 
-  // Credit check
-  const credits = await getUserCredits(user.id)
-  if (credits.balance_usd <= 0) {
-    return NextResponse.json(
-      { error: 'Insufficient credits. Add credits to continue chatting.' },
-      { status: 402 }
-    )
+  // Check for BYOK (user's own OpenRouter key)
+  const db = createServiceClient()
+  const { data: profileData } = await db
+    .from('user_profiles')
+    .select('openrouter_api_key')
+    .eq('id', user.id)
+    .single()
+  const userApiKey = profileData?.openrouter_api_key?.trim() || null
+  const isByok = !!userApiKey
+
+  // Credit check — skip if user has their own key
+  let credits = { balance_usd: 0, total_spent: 0 }
+  if (!isByok) {
+    credits = await getUserCredits(user.id)
+    if (credits.balance_usd <= 0) {
+      return NextResponse.json(
+        { error: 'Insufficient credits. Add credits or add your OpenRouter API key in Profile to continue.' },
+        { status: 402 }
+      )
+    }
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY
+  const apiKey = isByok ? userApiKey! : process.env.OPENROUTER_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
   }
@@ -70,9 +84,9 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Deduct credits after streaming completes
-        let newBalance = credits.balance_usd
-        if (inputTokens > 0 || outputTokens > 0) {
+        // Deduct credits after streaming completes (skip for BYOK users)
+        let newBalance = isByok ? -1 : credits.balance_usd
+        if (!isByok && (inputTokens > 0 || outputTokens > 0)) {
           const cost = calculateCost(inputTokens, outputTokens, costPer1MInput, costPer1MOutput)
           const result = await deductCredits(user.id, cost)
           newBalance = result.newBalance
