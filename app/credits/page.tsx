@@ -1,214 +1,186 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { NavBar } from '@/components/NavBar'
-import { CreditCard, CheckCircle, XCircle, Zap, AlertTriangle } from 'lucide-react'
+import { ExternalLink, Key, Zap, DollarSign, RefreshCw } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
-
-const PACKAGES = [
-  { amount: 5, description: 'Light usage', color: '#6366f1' },
-  { amount: 10, description: 'Regular user', color: '#8b5cf6', popular: true },
-  { amount: 20, description: 'Power user', color: '#a855f7' },
-  { amount: 50, description: 'Heavy usage', color: '#ec4899' },
-]
 
 interface Profile {
   display_name?: string | null
   avatar_url?: string | null
   avatar_color?: string | null
+  openrouter_api_key?: string | null
 }
 
-function CreditsPageInner() {
+export default function CreditsPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [balance, setBalance] = useState<number>(0)
-  const [loading, setLoading] = useState(true)
-  const [checkoutLoading, setCheckoutLoading] = useState<number | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  useEffect(() => {
-    const success = searchParams.get('success')
-    const canceled = searchParams.get('canceled')
-    if (success) setMessage({ type: 'success', text: 'Payment successful! Credits added to your account.' })
-    if (canceled) setMessage({ type: 'error', text: 'Payment canceled. No charges were made.' })
-  }, [searchParams])
+  const [balance, setBalance] = useState<number | null>(null)
+  const [loadingBalance, setLoadingBalance] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { router.replace('/login'); return }
       setSession(session)
-      if (!session) {
-        router.replace('/login')
-      } else {
-        fetchData(session)
-      }
-      setLoading(false)
+      fetchData(session)
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s)
       if (!s) router.replace('/login')
     })
     return () => subscription.unsubscribe()
   }, [router])
 
   async function fetchData(s: Session) {
-    const [creditsRes, profileRes] = await Promise.all([
-      fetch('/api/credits', { headers: { Authorization: `Bearer ${s.access_token}` } }),
-      fetch('/api/profile', { headers: { Authorization: `Bearer ${s.access_token}` } }),
-    ])
-    if (creditsRes.ok) {
-      const d = await creditsRes.json()
-      setBalance(d.balance ?? 0)
-    }
-    if (profileRes.ok) {
-      setProfile(await profileRes.json())
-    }
+    const res = await fetch('/api/profile', { headers: { Authorization: `Bearer ${s.access_token}` } })
+    if (res.ok) setProfile(await res.json())
   }
 
-  async function handleCheckout(amount: number) {
-    if (!session) return
-    setCheckoutLoading(amount)
+  async function fetchORBalance() {
+    if (!profile?.openrouter_api_key) return
+    setLoadingBalance(true)
     try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ amount }),
+      const res = await fetch('https://openrouter.ai/api/v1/credits', {
+        headers: { Authorization: `Bearer ${profile.openrouter_api_key}` }
       })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to start checkout' })
+      if (res.ok) {
+        const d = await res.json()
+        setBalance(d.data?.total_credits ?? d.credits ?? null)
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Network error. Please try again.' })
-    } finally {
-      setCheckoutLoading(null)
-    }
+    } catch { /* ignore */ }
+    setLoadingBalance(false)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-[#1a1a1a]">
-        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (profile?.openrouter_api_key) fetchORBalance()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile])
+
+  const hasKey = !!(profile?.openrouter_api_key?.trim())
 
   return (
-    <>
     <div className="flex flex-col h-screen bg-[#1a1a1a] text-white overflow-hidden">
-      <NavBar session={session} profile={profile} balance={balance} />
+      <NavBar session={session} profile={profile} balance={balance ?? undefined} />
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-10">
+        <div className="max-w-lg mx-auto px-4 py-12 space-y-6">
 
-          {/* Balance */}
-          <div className="bg-[#1f1f1f] border border-white/10 rounded-2xl p-6 mb-8 text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Zap className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider">Current Balance</h2>
-            </div>
-            <p className="text-5xl font-bold text-white/90 font-mono">${balance.toFixed(2)}</p>
-            {balance < 2 && balance > 0 && (
-              <div className="mt-3 flex items-center justify-center gap-1.5 text-amber-400 text-sm">
-                <AlertTriangle className="w-4 h-4" />
-                Running low — add credits to keep chatting
-              </div>
-            )}
-            {balance <= 0 && (
-              <div className="mt-3 flex items-center justify-center gap-1.5 text-red-400 text-sm">
-                <XCircle className="w-4 h-4" />
-                Add credits to continue chatting
-              </div>
-            )}
+          {/* Header */}
+          <div>
+            <h1 className="text-2xl font-bold text-white/90">Credits & Billing</h1>
+            <p className="text-white/40 text-sm mt-1">Ched runs on OpenRouter — you pay them directly, not us.</p>
           </div>
 
-          {/* Status messages */}
-          {message && (
-            <div className={`mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm ${
-              message.type === 'success'
-                ? 'bg-green-400/10 border border-green-400/20 text-green-400'
-                : 'bg-red-400/10 border border-red-400/20 text-red-400'
-            }`}>
-              {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-              {message.text}
+          {hasKey ? (
+            <>
+              {/* Current balance */}
+              <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-indigo-400" />
+                    <span className="text-white/70 font-medium">Your OpenRouter Balance</span>
+                  </div>
+                  <button
+                    onClick={fetchORBalance}
+                    disabled={loadingBalance}
+                    className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingBalance ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+                {balance !== null ? (
+                  <p className="text-4xl font-bold text-white">${balance.toFixed(4)}</p>
+                ) : (
+                  <p className="text-white/30 text-sm">{loadingBalance ? 'Loading balance…' : 'Could not fetch balance'}</p>
+                )}
+                <p className="text-white/30 text-xs mt-2">This balance is on your OpenRouter account and shared across all OpenRouter-powered apps you use.</p>
+              </div>
+
+              {/* Add credits CTA */}
+              <div className="bg-indigo-500/8 border border-indigo-500/20 rounded-2xl p-6 space-y-4">
+                <div>
+                  <h2 className="text-white font-semibold mb-1">Add more credits</h2>
+                  <p className="text-white/50 text-sm">Top up your OpenRouter balance directly. Starts at $5 — no subscription required.</p>
+                </div>
+
+                {/* Cost examples */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: '$5', sub: '~18,000 DeepSeek msgs' },
+                    { label: '$10', sub: '~3,300 Claude Sonnet msgs' },
+                    { label: '$20', sub: '~73,000 DeepSeek msgs' },
+                    { label: '$50', sub: '~16,600 Claude Sonnet msgs' },
+                  ].map(item => (
+                    <div key={item.label} className="bg-white/5 rounded-xl px-3 py-2.5">
+                      <p className="text-white font-bold text-lg">{item.label}</p>
+                      <p className="text-white/40 text-xs">{item.sub}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <a
+                  href="https://openrouter.ai/credits"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all text-sm"
+                >
+                  Add credits on OpenRouter
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+
+              {/* Key management */}
+              <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Key className="w-4 h-4 text-white/40" />
+                  <span className="text-white/60 text-sm font-medium">Your API Key</span>
+                </div>
+                <p className="text-white/30 text-xs font-mono">
+                  {profile?.openrouter_api_key?.slice(0, 12)}••••••••••••••••
+                </p>
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  Update key in Profile →
+                </button>
+              </div>
+            </>
+          ) : (
+            /* No key yet */
+            <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-6 text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto">
+                <Key className="w-6 h-6 text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-white font-semibold mb-1">Connect your OpenRouter account first</h2>
+                <p className="text-white/40 text-sm">You need a free OpenRouter API key to use Ched. It takes 2 minutes.</p>
+              </div>
+              <button
+                onClick={() => router.push('/onboarding')}
+                className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all text-sm"
+              >
+                <Zap className="w-4 h-4" />
+                Set up my API key
+              </button>
             </div>
           )}
 
-          {/* Packages */}
-          <h3 className="text-sm font-medium text-white/40 mb-4 uppercase tracking-wider">Add Credits</h3>
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            {PACKAGES.map(pkg => (
-              <button
-                key={pkg.amount}
-                onClick={() => handleCheckout(pkg.amount)}
-                disabled={checkoutLoading !== null}
-                className={`relative bg-[#1f1f1f] border rounded-2xl p-5 text-left hover:border-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed group ${
-                  pkg.popular ? 'border-indigo-500/40' : 'border-white/10'
-                }`}
-              >
-                {pkg.popular && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs px-2.5 py-0.5 rounded-full bg-indigo-500 text-white font-medium">
-                    Most Popular
-                  </span>
-                )}
-                <div className="flex items-center justify-between mb-2">
-                  <CreditCard className="w-4 h-4" style={{ color: pkg.color }} />
-                  {checkoutLoading === pkg.amount && (
-                    <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-                  )}
-                </div>
-                <p className="text-2xl font-bold text-white/90">${pkg.amount}</p>
-                <p className="text-xs text-white/40 mt-0.5">{pkg.description}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Pricing explanation */}
-          <div className="bg-[#1f1f1f] border border-white/5 rounded-2xl p-5">
-            <h3 className="text-sm font-semibold text-white/70 mb-3">How pricing works</h3>
-            <div className="space-y-2 text-sm text-white/40">
-              <p>Credits are deducted per message based on the model you use:</p>
-              <ul className="mt-2 space-y-1.5">
-                <li className="flex items-center justify-between">
-                  <span>Gemini Flash (fastest)</span>
-                  <span className="font-mono text-white/60">~$0.0001/msg</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>DeepSeek V3 (best value)</span>
-                  <span className="font-mono text-white/60">~$0.001/msg</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>Claude Sonnet (premium)</span>
-                  <span className="font-mono text-white/60">~$0.01/msg</span>
-                </li>
-              </ul>
-              <p className="mt-3 text-white/30">A 6.25% service fee is included in each request to keep the lights on.</p>
+          {/* How pricing works */}
+          <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-5 space-y-3">
+            <h3 className="text-white/70 font-semibold text-sm">How pricing works</h3>
+            <div className="space-y-2 text-xs text-white/40 leading-relaxed">
+              <p>• You pay <strong className="text-white/60">OpenRouter directly</strong> — Ched doesn&apos;t touch your money or take a cut.</p>
+              <p>• Different models cost different amounts. DeepSeek V3 is extremely cheap (~$0.27/1M tokens). Claude Sonnet is pricier ($3.00/1M tokens) but more powerful.</p>
+              <p>• OpenRouter charges per token (roughly per word). A typical conversation is 500–2,000 tokens.</p>
+              <p>• Your credits never expire and work across all OpenRouter-compatible apps.</p>
             </div>
           </div>
+
         </div>
       </div>
     </div>
-    </>
-  )
-}
-
-export default function CreditsPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-screen bg-[#1a1a1a]">
-        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-      </div>
-    }>
-      <CreditsPageInner />
-    </Suspense>
   )
 }

@@ -815,11 +815,11 @@ function ModelCard({ model }: { model: AIModel }) {
         {/* Benchmarks */}
         {guide?.benchmarks && (
           <div className="flex flex-wrap gap-1.5">
-            {guide.benchmarks.mmlu && <BenchmarkChip label="MMLU" value={guide.benchmarks.mmlu} color={model.providerColor} />}
-            {guide.benchmarks.humaneval && <BenchmarkChip label="HumanEval" value={guide.benchmarks.humaneval} color={model.providerColor} />}
-            {guide.benchmarks.math && <BenchmarkChip label="MATH" value={guide.benchmarks.math} color={model.providerColor} />}
-            {guide.benchmarks.arenaElo && <BenchmarkChip label="Arena ELO" value={guide.benchmarks.arenaElo} color={model.providerColor} />}
-            {guide.benchmarks.gpqa && <BenchmarkChip label="GPQA" value={guide.benchmarks.gpqa} color={model.providerColor} />}
+            {guide.benchmarks.mmlu && <BenchmarkChip label="General Knowledge" value={guide.benchmarks.mmlu} color={model.providerColor} />}
+            {guide.benchmarks.humaneval && <BenchmarkChip label="Coding Score" value={guide.benchmarks.humaneval} color={model.providerColor} />}
+            {guide.benchmarks.math && <BenchmarkChip label="Math Score" value={guide.benchmarks.math} color={model.providerColor} />}
+            {guide.benchmarks.arenaElo && <BenchmarkChip label="Community Rank" value={guide.benchmarks.arenaElo} color={model.providerColor} />}
+            {guide.benchmarks.gpqa && <BenchmarkChip label="Science IQ" value={guide.benchmarks.gpqa} color={model.providerColor} />}
           </div>
         )}
       </div>
@@ -877,7 +877,7 @@ function ModelCard({ model }: { model: AIModel }) {
                 <div className="bg-white/3 border border-white/6 rounded-xl p-3.5">
                   <h4 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                     <Trophy className="w-3.5 h-3.5" />
-                    Benchmark Context
+                    How We Score Models
                   </h4>
                   <p className="text-sm text-white/45 leading-relaxed">{guide.benchmarks.note}</p>
                   <p className="text-xs text-white/25 mt-1.5">Knowledge cutoff: {guide.knowledgeCutoff}</p>
@@ -1008,11 +1008,12 @@ export default function ModelsPage() {
 
           {/* Legend */}
           <div className="flex flex-wrap gap-4 mb-8 text-xs text-white/35">
-            <div className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> MMLU — general knowledge benchmark</div>
-            <div className="flex items-center gap-1.5"><Gauge className="w-3.5 h-3.5" /> HumanEval — coding benchmark</div>
+            <div className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> General Knowledge — how well the model knows facts, history, science, and general topics (out of 100%)</div>
+            <div className="flex items-center gap-1.5"><Gauge className="w-3.5 h-3.5" /> Coding Score — how well it writes working code, tested against real programming problems (out of 100%)</div>
             <div className="flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" /> Arena ELO — human preference voting</div>
-            <div className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> MATH — competition math benchmark</div>
-            <div className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> GPQA — PhD-level science benchmark</div>
+            <div className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Math Score — performance on competition-level math problems (out of 100%)</div>
+            <div className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Science IQ — PhD-level science questions — only the smartest models score high here</div>
+            <div className="flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5" /> Community Rank — ELO score from thousands of real humans voting which AI gave the better answer in head-to-head battles. Higher = better.</div>
           </div>
 
           {/* Provider filter */}
