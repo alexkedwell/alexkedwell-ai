@@ -22,9 +22,13 @@ export async function getUserCredits(userId: string) {
     .single()
   
   if (error || !data) {
-    // Create a default record
-    await db.from('user_credits').upsert({ id: userId, balance_usd: 0, total_spent: 0 }, { ignoreDuplicates: true })
-    return { balance_usd: 0, total_spent: 0 }
+    // New user — seed with $5 starter credits
+    const STARTER_CREDITS = 5.00
+    await db.from('user_credits').upsert(
+      { id: userId, balance_usd: STARTER_CREDITS, total_spent: 0 },
+      { ignoreDuplicates: true }
+    )
+    return { balance_usd: STARTER_CREDITS, total_spent: 0 }
   }
   return data
 }

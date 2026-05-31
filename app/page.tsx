@@ -223,23 +223,23 @@ export default function Home() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setDropdownOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/8 bg-white/5 border border-white/10 hover:border-white/20 transition-all text-sm font-medium text-white/80"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/8 bg-white/5 border border-white/10 hover:border-white/20 transition-all text-sm font-medium text-white/80 max-w-[180px] sm:max-w-none"
       >
         <ProviderDot model={selectedModel} />
-        <span>{selectedModel.name}</span>
+        <span className="truncate">{selectedModel.name}</span>
         {selectedModel.badge && (
           <span
-            className="text-xs px-1.5 py-0.5 rounded font-medium"
+            className="hidden sm:inline text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
             style={{ backgroundColor: selectedModel.badgeColor + '22', color: selectedModel.badgeColor }}
           >
             {selectedModel.badge}
           </span>
         )}
-        <ChevronDown className={`w-3.5 h-3.5 text-white/40 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-white/40 transition-transform duration-200 flex-shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {dropdownOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-[#111111] border border-white/10 rounded-xl shadow-2xl z-50 py-1.5 overflow-hidden">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-[#111111] border border-white/10 rounded-xl shadow-2xl z-50 py-1.5 overflow-hidden">
           {MODELS.map(model => (
             <button
               key={model.id}

@@ -47,7 +47,7 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
   const isLow = typeof balance === 'number' && balance < 2
 
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 flex-shrink-0 h-12">
+    <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5 flex-shrink-0 h-12 gap-1">
       {/* Left: Logo */}
       <Link href="/" className="text-sm font-semibold text-white/60 tracking-wide hover:text-white/90 transition-colors">
         Ched
@@ -59,12 +59,12 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
       </div>
 
       {/* Right: balance + avatar */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         {/* Nav links */}
-        <div className="flex items-center gap-1 mr-2">
+        <div className="flex items-center gap-0.5 sm:gap-1 mr-1 sm:mr-2">
           <Link
             href="/"
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
               pathname === '/' ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
@@ -73,7 +73,7 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
           </Link>
           <Link
             href="/rooms"
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
               pathname.startsWith('/rooms') ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
@@ -82,7 +82,7 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
           </Link>
           <Link
             href="/credits"
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
               pathname === '/credits' ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
