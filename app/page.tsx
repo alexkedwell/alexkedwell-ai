@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MODELS, AIModel, DEFAULT_MODEL } from '@/lib/models'
-import { Send, PenSquare, ChevronDown, Check, AlertTriangle, Zap, Brain, DollarSign } from 'lucide-react'
+import { Send, PenSquare, ChevronDown, Check, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { NavBar } from '@/components/NavBar'
 import type { Session } from '@supabase/supabase-js'
@@ -272,47 +272,21 @@ export default function Home() {
               {/* Row 2: tagline */}
               <p className="text-xs text-white/35 ml-4 mb-2 leading-snug">{model.tagline}</p>
               {/* Row 3: stats */}
-              <div className="flex items-center gap-3 ml-4">
-                {/* Intelligence */}
-                <div className="flex items-center gap-1">
-                  <Brain className="w-3 h-3 text-white/20" />
-                  <div className="flex gap-0.5">
-                    {[...Array(10)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{
-                          backgroundColor: i < Math.round(model.intelligenceRating)
-                            ? model.providerColor
-                            : 'rgba(255,255,255,0.08)'
-                        }}
-                      />
-                    ))}
-                  </div>
+              <div className="flex items-center gap-2 ml-4">
+                {/* IQ */}
+                <div className="flex flex-col items-center bg-white/5 rounded-lg px-2 py-1 min-w-[44px]">
+                  <span className="text-[9px] text-white/30 uppercase tracking-wider font-medium">IQ</span>
+                  <span className="text-xs font-bold" style={{ color: model.providerColor }}>{model.intelligenceRating}/10</span>
                 </div>
                 {/* Speed */}
-                <div className="flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-white/20" />
-                  <div className="flex gap-0.5">
-                    {[...Array(10)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{
-                          backgroundColor: i < Math.round(model.speedRating)
-                            ? '#22c55e'
-                            : 'rgba(255,255,255,0.08)'
-                        }}
-                      />
-                    ))}
-                  </div>
+                <div className="flex flex-col items-center bg-white/5 rounded-lg px-2 py-1 min-w-[44px]">
+                  <span className="text-[9px] text-white/30 uppercase tracking-wider font-medium">Speed</span>
+                  <span className="text-xs font-bold text-green-400">{model.speedRating}/10</span>
                 </div>
-                {/* Price */}
-                <div className="flex items-center gap-1 ml-auto">
-                  <DollarSign className="w-3 h-3 text-white/20" />
-                  <span className="text-[10px] text-white/30 font-mono">
-                    ${model.costPer1MInput.toFixed(2)}/${model.costPer1MOutput.toFixed(2)} /1M
-                  </span>
+                {/* Cost */}
+                <div className="flex flex-col items-center bg-white/5 rounded-lg px-2 py-1 flex-1">
+                  <span className="text-[9px] text-white/30 uppercase tracking-wider font-medium">Cost /1M tokens</span>
+                  <span className="text-[10px] font-mono text-white/50">${model.costPer1MInput} in · ${model.costPer1MOutput} out</span>
                 </div>
               </div>
             </button>
