@@ -1,25 +1,66 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { NavBar } from '@/components/NavBar'
-import { ExternalLink, Key, Zap, DollarSign, RefreshCw } from 'lucide-react'
+import { CheckCircle, XCircle, Zap, DollarSign, Shield } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
+import { Suspense } from 'react'
+
+const PACKAGES = [
+  {
+    amount: 5,
+    label: '$5',
+    messages: '~18,500',
+    model: 'DeepSeek V3',
+    color: '#6366f1',
+    description: 'Great for trying it out',
+  },
+  {
+    amount: 10,
+    label: '$10',
+    messages: '~3,300',
+    model: 'Claude Sonnet',
+    color: '#8b5cf6',
+    popular: true,
+    description: 'Most popular for individuals',
+  },
+  {
+    amount: 20,
+    label: '$20',
+    messages: '~37,000',
+    model: 'DeepSeek V3',
+    color: '#a855f7',
+    description: 'Best value for regular use',
+  },
+  {
+    amount: 50,
+    label: '$50',
+    messages: '~8,200',
+    model: 'Claude Sonnet',
+    color: '#ec4899',
+    description: 'Power users & small teams',
+  },
+]
 
 interface Profile {
   display_name?: string | null
   avatar_url?: string | null
   avatar_color?: string | null
-  openrouter_api_key?: string | null
 }
 
-export default function CreditsPage() {
+function CreditsInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [balance, setBalance] = useState<number | null>(null)
-  const [loadingBalance, setLoadingBalance] = useState(false)
+  const [balance, setBalance] = useState<number>(0)
+  const [loading, setLoading] = useState(true)
+  const [buying, setBuying] = useState<number | null>(null)
+
+  const success = searchParams.get('success')
+  const canceled = searchParams.get('canceled')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -34,153 +75,140 @@ export default function CreditsPage() {
   }, [router])
 
   async function fetchData(s: Session) {
-    const res = await fetch('/api/profile', { headers: { Authorization: `Bearer ${s.access_token}` } })
-    if (res.ok) setProfile(await res.json())
+    const [profileRes, creditsRes] = await Promise.all([
+      fetch('/api/profile', { headers: { Authorization: `Bearer ${s.access_token}` } }),
+      fetch('/api/credits', { headers: { Authorization: `Bearer ${s.access_token}` } }),
+    ])
+    if (profileRes.ok) setProfile(await profileRes.json())
+    if (creditsRes.ok) {
+      const c = await creditsRes.json()
+      setBalance(c.balance ?? 0)
+    }
+    setLoading(false)
   }
 
-  async function fetchORBalance() {
-    if (!profile?.openrouter_api_key) return
-    setLoadingBalance(true)
-    try {
-      const res = await fetch('https://openrouter.ai/api/v1/credits', {
-        headers: { Authorization: `Bearer ${profile.openrouter_api_key}` }
-      })
-      if (res.ok) {
-        const d = await res.json()
-        setBalance(d.data?.total_credits ?? d.credits ?? null)
-      }
-    } catch { /* ignore */ }
-    setLoadingBalance(false)
+  async function handleBuy(amount: number) {
+    if (!session) return
+    setBuying(amount)
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ amount }),
+    })
+    if (res.ok) {
+      const { url } = await res.json()
+      window.location.href = url
+    } else {
+      const d = await res.json()
+      alert(d.error || 'Checkout failed — try again')
+      setBuying(null)
+    }
   }
-
-  useEffect(() => {
-    if (profile?.openrouter_api_key) fetchORBalance()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile])
-
-  const hasKey = !!(profile?.openrouter_api_key?.trim())
 
   return (
     <div className="flex flex-col h-screen bg-[#1a1a1a] text-white overflow-hidden">
-      <NavBar session={session} profile={profile} balance={balance ?? undefined} />
+      <NavBar session={session} profile={profile} balance={balance} />
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-lg mx-auto px-4 py-12 space-y-6">
+        <div className="max-w-lg mx-auto px-4 py-10 space-y-6">
 
-          {/* Header */}
-          <div>
-            <h1 className="text-2xl font-bold text-white/90">Credits & Billing</h1>
-            <p className="text-white/40 text-sm mt-1">Ched runs on OpenRouter — you pay them directly, not us.</p>
-          </div>
-
-          {hasKey ? (
-            <>
-              {/* Current balance */}
-              <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-indigo-400" />
-                    <span className="text-white/70 font-medium">Your OpenRouter Balance</span>
-                  </div>
-                  <button
-                    onClick={fetchORBalance}
-                    disabled={loadingBalance}
-                    className="p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${loadingBalance ? 'animate-spin' : ''}`} />
-                  </button>
-                </div>
-                {balance !== null ? (
-                  <p className="text-4xl font-bold text-white">${balance.toFixed(4)}</p>
-                ) : (
-                  <p className="text-white/30 text-sm">{loadingBalance ? 'Loading balance…' : 'Could not fetch balance'}</p>
-                )}
-                <p className="text-white/30 text-xs mt-2">This balance is on your OpenRouter account and shared across all OpenRouter-powered apps you use.</p>
-              </div>
-
-              {/* Add credits CTA */}
-              <div className="bg-indigo-500/8 border border-indigo-500/20 rounded-2xl p-6 space-y-4">
-                <div>
-                  <h2 className="text-white font-semibold mb-1">Add more credits</h2>
-                  <p className="text-white/50 text-sm">Top up your OpenRouter balance directly. Starts at $5 — no subscription required.</p>
-                </div>
-
-                {/* Cost examples */}
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: '$5', sub: '~18,000 DeepSeek msgs' },
-                    { label: '$10', sub: '~3,300 Claude Sonnet msgs' },
-                    { label: '$20', sub: '~73,000 DeepSeek msgs' },
-                    { label: '$50', sub: '~16,600 Claude Sonnet msgs' },
-                  ].map(item => (
-                    <div key={item.label} className="bg-white/5 rounded-xl px-3 py-2.5">
-                      <p className="text-white font-bold text-lg">{item.label}</p>
-                      <p className="text-white/40 text-xs">{item.sub}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <a
-                  href="https://openrouter.ai/credits"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all text-sm"
-                >
-                  Add credits on OpenRouter
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-
-              {/* Key management */}
-              <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Key className="w-4 h-4 text-white/40" />
-                  <span className="text-white/60 text-sm font-medium">Your API Key</span>
-                </div>
-                <p className="text-white/30 text-xs font-mono">
-                  {profile?.openrouter_api_key?.slice(0, 12)}••••••••••••••••
-                </p>
-                <button
-                  onClick={() => router.push('/profile')}
-                  className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                >
-                  Update key in Profile →
-                </button>
-              </div>
-            </>
-          ) : (
-            /* No key yet */
-            <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-6 text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto">
-                <Key className="w-6 h-6 text-indigo-400" />
-              </div>
-              <div>
-                <h2 className="text-white font-semibold mb-1">Connect your OpenRouter account first</h2>
-                <p className="text-white/40 text-sm">You need a free OpenRouter API key to use Ched. It takes 2 minutes.</p>
-              </div>
-              <button
-                onClick={() => router.push('/onboarding')}
-                className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all text-sm"
-              >
-                <Zap className="w-4 h-4" />
-                Set up my API key
-              </button>
+          {/* Success / canceled banners */}
+          {success && (
+            <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-green-400 text-sm">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              Credits added to your account! You're good to go.
+            </div>
+          )}
+          {canceled && (
+            <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
+              <XCircle className="w-5 h-5 flex-shrink-0" />
+              Payment canceled — your card was not charged.
             </div>
           )}
 
-          {/* How pricing works */}
+          {/* Header + balance */}
+          <div>
+            <h1 className="text-2xl font-bold text-white/90">Add Credits</h1>
+            <p className="text-white/40 text-sm mt-1">Credits never expire. Use any model, any time.</p>
+          </div>
+
+          {!loading && (
+            <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-indigo-400" />
+                <span className="text-white/60 text-sm">Current balance</span>
+              </div>
+              <span className="text-white font-bold text-xl">${balance.toFixed(4)}</span>
+            </div>
+          )}
+
+          {/* Packages */}
+          <div className="grid grid-cols-2 gap-3">
+            {PACKAGES.map(pkg => (
+              <button
+                key={pkg.amount}
+                onClick={() => handleBuy(pkg.amount)}
+                disabled={!!buying}
+                className={`relative text-left bg-[#2a2a2a] border rounded-2xl p-4 transition-all hover:border-white/25 disabled:opacity-60 disabled:cursor-not-allowed ${
+                  pkg.popular ? 'border-indigo-500/50' : 'border-white/10'
+                }`}
+              >
+                {pkg.popular && (
+                  <div className="absolute -top-2.5 left-4 text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-semibold">
+                    Most popular
+                  </div>
+                )}
+                <div className="text-2xl font-bold text-white mb-1">{pkg.label}</div>
+                <div className="text-xs text-white/40 mb-3">{pkg.description}</div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Zap className="w-3 h-3" style={{ color: pkg.color }} />
+                    <span className="text-xs text-white/60">{pkg.messages} {pkg.model} messages</span>
+                  </div>
+                </div>
+                {buying === pkg.amount && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#2a2a2a]/80 rounded-2xl">
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Trust signals */}
+          <div className="flex items-center justify-center gap-6 text-xs text-white/25">
+            <div className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5" />
+              Secured by Stripe
+            </div>
+            <div>Apple Pay & Google Pay accepted</div>
+            <div>Credits never expire</div>
+          </div>
+
+          {/* How it works */}
           <div className="bg-[#2a2a2a] border border-white/10 rounded-2xl p-5 space-y-3">
-            <h3 className="text-white/70 font-semibold text-sm">How pricing works</h3>
+            <h3 className="text-white/70 font-semibold text-sm">How credits work</h3>
             <div className="space-y-2 text-xs text-white/40 leading-relaxed">
-              <p>• You pay <strong className="text-white/60">OpenRouter directly</strong> — Ched doesn&apos;t touch your money or take a cut.</p>
-              <p>• Different models cost different amounts. DeepSeek V3 is extremely cheap (~$0.27/1M tokens). Claude Sonnet is pricier ($3.00/1M tokens) but more powerful.</p>
-              <p>• OpenRouter charges per token (roughly per word). A typical conversation is 500–2,000 tokens.</p>
-              <p>• Your credits never expire and work across all OpenRouter-compatible apps.</p>
+              <p>• Credits are deducted per message based on which model you use. Cheap models (like DeepSeek) use very little. Premium models (like Claude Opus) use more.</p>
+              <p>• A typical message + response is 500–2,000 tokens. One token ≈ one word.</p>
+              <p>• Credits never expire — they sit in your account until you use them.</p>
+              <p>• Payment is processed securely by Stripe. We never store your card details.</p>
             </div>
           </div>
 
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CreditsPage() {
+  return (
+    <Suspense>
+      <CreditsInner />
+    </Suspense>
   )
 }

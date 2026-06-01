@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { getUserFromRequest } from '@/lib/auth-helpers'
 import { getUserCredits, deductCredits, calculateCost } from '@/lib/credits'
-import { createServiceClient } from '@/lib/supabase'
 import { MODELS } from '@/lib/models'
 
 export async function POST(req: NextRequest) {
@@ -11,37 +10,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing messages or modelId' }, { status: 400 })
   }
 
-  // Auth check
   const user = await getUserFromRequest(req)
   if (!user) {
     return NextResponse.json({ error: 'Please sign in to chat' }, { status: 401 })
   }
 
-  // Check for BYOK (user's own OpenRouter key)
-  const db = createServiceClient()
-  const { data: profileData } = await db
-    .from('user_profiles')
-    .select('openrouter_api_key')
-    .eq('id', user.id)
-    .single()
-  const userApiKey = profileData?.openrouter_api_key?.trim() || null
-  const isByok = !!userApiKey
-
-  // Credit check — skip if user has their own key
-  let credits = { balance_usd: 0, total_spent: 0 }
-  if (!isByok) {
-    credits = await getUserCredits(user.id)
-    if (credits.balance_usd <= 0) {
-      return NextResponse.json(
-        { error: 'Insufficient credits. Add credits or add your OpenRouter API key in Profile to continue.' },
-        { status: 402 }
-      )
-    }
+  // Credit check — all users must have credits
+  const credits = await getUserCredits(user.id)
+  if (credits.balance_usd <= 0) {
+    return NextResponse.json(
+      { error: 'You\'re out of credits. Add more to keep chatting.' },
+      { status: 402 }
+    )
   }
 
-  const apiKey = isByok ? userApiKey! : process.env.OPENROUTER_API_KEY
+  const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
+    return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 500 })
   }
 
   const model = MODELS.find(m => m.id === modelId)
@@ -52,8 +37,8 @@ export async function POST(req: NextRequest) {
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey,
     defaultHeaders: {
-      'HTTP-Referer': 'https://alexkedwell.com',
-      'X-Title': 'AlexKedwell AI Hub',
+      'HTTP-Referer': 'https://ched.io',
+      'X-Title': 'Ched AI',
     },
   })
 
@@ -77,24 +62,21 @@ export async function POST(req: NextRequest) {
           if (text) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
           }
-          // Capture usage from the final chunk
           if (chunk.usage) {
             inputTokens = chunk.usage.prompt_tokens ?? 0
             outputTokens = chunk.usage.completion_tokens ?? 0
           }
         }
 
-        // Deduct credits after streaming completes (skip for BYOK users)
-        let newBalance = isByok ? -1 : credits.balance_usd
-        if (!isByok && (inputTokens > 0 || outputTokens > 0)) {
+        // Deduct from user's Ched balance after streaming
+        let newBalance = credits.balance_usd
+        if (inputTokens > 0 || outputTokens > 0) {
           const cost = calculateCost(inputTokens, outputTokens, costPer1MInput, costPer1MOutput)
           const result = await deductCredits(user.id, cost)
           newBalance = result.newBalance
         }
 
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ balance: newBalance })}\n\n`)
-        )
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ balance: newBalance })}\n\n`))
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
@@ -110,7 +92,6 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
-      'X-Credit-Balance': String(credits.balance_usd),
     },
   })
 }

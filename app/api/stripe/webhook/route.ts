@@ -6,38 +6,45 @@ export async function POST(req: NextRequest) {
   const stripeKey = process.env.STRIPE_SECRET_KEY
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
-  if (!stripeKey || stripeKey === 'sk_test_placeholder') {
+  if (!stripeKey || !webhookSecret) {
     return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 })
   }
 
   const stripe = new Stripe(stripeKey)
   const body = await req.text()
-  const sig = req.headers.get('stripe-signature')
+  const sig = req.headers.get('stripe-signature') ?? ''
 
   let event: Stripe.Event
-
-  if (webhookSecret && sig) {
-    try {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Webhook error'
-      return NextResponse.json({ error: `Webhook Error: ${msg}` }, { status: 400 })
-    }
-  } else {
-    // No webhook secret configured — parse without verification (dev mode)
-    event = JSON.parse(body) as Stripe.Event
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
+  } catch (err) {
+    console.error('Webhook signature failed:', err)
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const userId = session.metadata?.userId
-    const creditAmount = Number(session.metadata?.creditAmount)
 
-    if (userId && creditAmount > 0) {
-      await addCredits(userId, creditAmount)
-      console.log(`Added $${creditAmount} credits to user ${userId}`)
+    // Only fulfill paid sessions
+    if (session.payment_status !== 'paid') return NextResponse.json({ ok: true })
+
+    const userId = session.metadata?.user_id
+    const creditsUsd = parseFloat(session.metadata?.credits_usd ?? '0')
+
+    if (!userId || !creditsUsd) {
+      console.error('Missing metadata on session:', session.id)
+      return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
     }
+
+    // Instantly add credits to user's account
+    const newBalance = await addCredits(userId, creditsUsd)
+    console.log(`✅ Credits added: user=${userId} amount=$${creditsUsd} newBalance=$${newBalance}`)
   }
 
-  return NextResponse.json({ received: true })
+  return NextResponse.json({ ok: true })
+}
+
+// Required: disable body parsing so Stripe signature check works
+export const config = {
+  api: { bodyParser: false },
 }
