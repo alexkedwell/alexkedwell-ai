@@ -52,6 +52,7 @@ export default function Home() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [suggestion, setSuggestion] = useState<{ modelId: string; reason: string; name: string } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -110,6 +111,29 @@ export default function Home() {
     ta.style.height = 'auto'
     ta.style.height = Math.min(ta.scrollHeight, 200) + 'px'
   }, [input])
+
+  // Model suggestion on input change
+  useEffect(() => {
+    if (!input.trim() || input.length < 15) { setSuggestion(null); return }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/suggest-model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: input }),
+        })
+        if (!res.ok) return
+        const { suggestion: s } = await res.json()
+        if (s && s.modelId !== selectedModel.id) {
+          const suggestedModel = MODELS.find(m => m.id === s.modelId)
+          if (suggestedModel) setSuggestion({ ...s, name: suggestedModel.name })
+        } else {
+          setSuggestion(null)
+        }
+      } catch { setSuggestion(null) }
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [input, selectedModel.id])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -386,6 +410,25 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* Model suggestion banner */}
+        {suggestion && (
+          <div className="px-4 pb-1 flex-shrink-0">
+            <div className="max-w-2xl mx-auto flex items-center gap-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-3 py-2">
+              <span className="text-xs text-indigo-300 flex-1">💡 {suggestion.reason}</span>
+              <button
+                onClick={() => {
+                  const m = MODELS.find(x => x.id === suggestion.modelId)
+                  if (m) { setSelectedModel(m); setSuggestion(null) }
+                }}
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold whitespace-nowrap transition-colors"
+              >
+                Switch to {suggestion.name} →
+              </button>
+              <button onClick={() => setSuggestion(null)} className="text-white/20 hover:text-white/50 transition-colors text-xs">✕</button>
+            </div>
+          </div>
+        )}
 
         {/* Input */}
         <div className="px-4 pb-6 pt-2 flex-shrink-0">

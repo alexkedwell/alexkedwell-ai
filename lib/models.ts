@@ -352,6 +352,23 @@ export const MODELS: AIModel[] = [
     intelligenceRating: 9.4,
     speedRating: 5,
   },
+  // ── NousResearch (Hermes) ─────────────────────────────────
+  {
+    id: 'nousresearch/hermes-3-llama-3.1-70b',
+    name: 'Hermes 3 70B',
+    provider: 'NousResearch',
+    providerColor: '#F59E0B',
+    tagline: 'Uncensored, direct, and surprisingly smart',
+    description: 'NousResearch\'s Hermes 3 built on Llama 3.1 70B. Known for following complex instructions without guardrails, strong roleplay, agentic tasks, and structured output. Great for tasks where other models are overly cautious or refuse.',
+    strengths: ['Instruction following', 'No content filters', 'Agentic tasks', 'Structured JSON output', 'Creative writing'],
+    costPer1MInput: 0.30,
+    costPer1MOutput: 0.30,
+    contextWindow: '128K tokens',
+    intelligenceRating: 8.0,
+    speedRating: 8,
+    badge: 'Most Direct',
+    badgeColor: '#F59E0B',
+  },
   // ── Mistral ────────────────────────────────────────────────
   {
     id: 'mistralai/mistral-large-2512',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { getUserFromRequest } from '@/lib/auth-helpers'
 import { getUserCredits, deductCredits, calculateCost } from '@/lib/credits'
+import { createServiceClient } from '@/lib/supabase'
 import { MODELS } from '@/lib/models'
 
 export async function POST(req: NextRequest) {
@@ -33,6 +34,19 @@ export async function POST(req: NextRequest) {
   const costPer1MInput = model?.costPer1MInput ?? 1.0
   const costPer1MOutput = model?.costPer1MOutput ?? 3.0
 
+  // Load user's saved context (GitHub, Vercel, preferences, etc.)
+  const db = createServiceClient()
+  const { data: contextRows } = await db
+    .from('user_context')
+    .select('key, value')
+    .eq('user_id', user.id)
+
+  const userContextBlock = contextRows?.length
+    ? `\n\nUser context (remember this across the conversation):\n${contextRows.map(r => `- ${r.key}: ${r.value}`).join('\n')}`
+    : ''
+
+  const systemPrompt = `You are Ched, an AI assistant. Be direct, helpful, and concise. If the user asks you to build or deploy something, remember their saved accounts and preferences below.${userContextBlock}`
+
   const openrouter = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey,
@@ -51,7 +65,10 @@ export async function POST(req: NextRequest) {
       try {
         const completion = await openrouter.chat.completions.create({
           model: modelId,
-          messages,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...messages,
+          ],
           stream: true,
           max_tokens: 4096,
           stream_options: { include_usage: true },
