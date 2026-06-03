@@ -14,7 +14,7 @@ export default function ForgotPasswordPage() {
     setError('')
     setLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://alexkedwell.com/auth/reset-password',
+      redirectTo: 'https://ched.io/auth/callback?type=recovery',
     })
     if (error) {
       setError(error.message)

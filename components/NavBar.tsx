@@ -73,7 +73,7 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
           </Link>
           <Link
             href="/rooms"
-            className={`flex items-center justify-center w-8 h-8 sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`hidden sm:flex items-center justify-center sm:w-auto sm:px-2.5 sm:gap-1.5 rounded-lg text-xs font-medium h-8 transition-colors ${
               pathname.startsWith('/rooms') ? 'bg-white/10 text-white/90' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >
@@ -163,6 +163,14 @@ export function NavBar({ session, profile, balance, centerContent }: NavBarProps
                 </Link>
                 {/* Mobile-only links */}
                 <div className="sm:hidden">
+                  <Link
+                    href="/rooms"
+                    onClick={() => setDropdownOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white/90 transition-colors"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    Rooms
+                  </Link>
                   <Link
                     href="/models"
                     onClick={() => setDropdownOpen(false)}

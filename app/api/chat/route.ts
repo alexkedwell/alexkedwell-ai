@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { getUserFromRequest } from '@/lib/auth-helpers'
 import { getUserCredits, deductCredits, calculateCost } from '@/lib/credits'
 import { createServiceClient } from '@/lib/supabase'
+import { decryptApiKey } from '@/lib/crypto'
 import { MODELS } from '@/lib/models'
 
 export async function POST(req: NextRequest) {
@@ -16,16 +17,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Please sign in to chat' }, { status: 401 })
   }
 
-  // Credit check — all users must have credits
-  const credits = await getUserCredits(user.id)
-  if (credits.balance_usd <= 0) {
-    return NextResponse.json(
-      { error: 'You\'re out of credits. Add more to keep chatting.' },
-      { status: 402 }
-    )
+  const db = createServiceClient()
+
+  // Check if user has their own OpenRouter API key (BYOK)
+  const { data: apiKeyRow } = await db
+    .from('user_api_keys')
+    .select('encrypted_key')
+    .eq('user_id', user.id)
+    .eq('provider', 'openrouter')
+    .single()
+
+  let userApiKey: string | null = null
+  let isByok = false
+
+  if (apiKeyRow?.encrypted_key) {
+    try {
+      userApiKey = decryptApiKey(apiKeyRow.encrypted_key, user.id)
+      isByok = true
+    } catch {
+      // Decryption failed - fall through to site key
+    }
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY
+  // Credit check — only for non-BYOK users
+  let credits = { balance_usd: 0, total_spent: 0 }
+  if (!isByok) {
+    credits = await getUserCredits(user.id)
+    if (credits.balance_usd <= 0) {
+      return NextResponse.json(
+        { error: 'You\'re out of credits. Add more to keep chatting.' },
+        { status: 402 }
+      )
+    }
+  }
+
+  // Use user's key (BYOK) or fall back to site key
+  const apiKey = isByok ? userApiKey! : process.env.OPENROUTER_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 500 })
   }
@@ -35,7 +62,6 @@ export async function POST(req: NextRequest) {
   const costPer1MOutput = model?.costPer1MOutput ?? 3.0
 
   // Load user's saved context (GitHub, Vercel, preferences, etc.)
-  const db = createServiceClient()
   const { data: contextRows } = await db
     .from('user_context')
     .select('key, value')
@@ -85,9 +111,9 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Deduct from user's Ched balance after streaming
-        let newBalance = credits.balance_usd
-        if (inputTokens > 0 || outputTokens > 0) {
+        // Deduct from user's Ched balance after streaming (skip for BYOK users)
+        let newBalance = isByok ? 9999 : credits.balance_usd
+        if (!isByok && (inputTokens > 0 || outputTokens > 0)) {
           const cost = calculateCost(inputTokens, outputTokens, costPer1MInput, costPer1MOutput)
           const result = await deductCredits(user.id, cost)
           newBalance = result.newBalance

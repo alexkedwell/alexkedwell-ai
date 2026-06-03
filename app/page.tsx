@@ -154,10 +154,10 @@ export default function Home() {
       return
     }
 
+    setInput('')  // Clear input immediately for snappy UX
     const userMsg: Message = { role: 'user', content }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
-    setInput('')
     setLoading(true)
 
     const assistantMsg: Message = { role: 'assistant', content: '' }

@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkEmail, setCheckEmail] = useState(false)
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -31,7 +32,7 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      // Create profile and credits
+      // Auto-confirmed — create profile and credits, then onboard
       await Promise.allSettled([
         fetch('/api/profile', {
           method: 'POST',
@@ -45,9 +46,33 @@ export default function SignupPage() {
           headers: { Authorization: `Bearer ${data.session.access_token}` },
         }),
       ])
+      router.push('/onboarding')
+    } else {
+      // Email confirmation required — show check-your-email state
+      setLoading(false)
+      setCheckEmail(true)
     }
+  }
 
-    router.push('/onboarding')
+  if (checkEmail) {
+    return (
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center">
+          <div className="text-5xl mb-4">📬</div>
+          <h1 className="text-2xl font-semibold text-white/90 mb-2">Check your email</h1>
+          <p className="text-sm text-white/40 mb-6">
+            We sent a verification link to <span className="text-white/70">{email}</span>.
+            Click it to activate your account.
+          </p>
+          <Link
+            href="/login"
+            className="inline-block text-sm text-white/50 hover:text-white transition-colors"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
